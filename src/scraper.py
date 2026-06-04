@@ -153,69 +153,57 @@ def scrape_hn(domain: str, keywords: list, max_items: int = 40) -> int:
     return inserted
 
 
-# ── Reddit ───────────────────────────────────────────────────────────────────
-
-def _get_reddit_token():
-    if not REDDIT_CLIENT_ID or not REDDIT_CLIENT_SECRET:
-        return None
-    try:
-        resp = requests.post(
-            "https://www.reddit.com/api/v1/access_token",
-            auth=(REDDIT_CLIENT_ID, REDDIT_CLIENT_SECRET),
-            data={"grant_type": "client_credentials"},
-            headers={"User-Agent": REDDIT_USER_AGENT},
-            timeout=10,
-        )
-        resp.raise_for_status()
-        return resp.json().get("access_token")
-    except Exception as e:
-        print(f"  [Reddit] Token error: {e}")
-        return None
-
+# ── Reddit via Pullpush (no credentials required) ─────────────────────────────
 
 def scrape_reddit(domain: str, subreddits: list, limit: int = 50) -> int:
-    token = _get_reddit_token()
-    if not token:
-        print("  [Reddit] Skipping — no credentials configured")
-        return 0
-
+    """
+    Uses api.pullpush.io — a Reddit archive mirror that requires no auth.
+    Falls back silently if the service is unreachable.
+    """
     inserted = 0
-    headers = {"Authorization": f"bearer {token}", "User-Agent": REDDIT_USER_AGENT}
+    base = "https://api.pullpush.io/reddit/search/submission"
 
     for sub in subreddits:
-        for sort in ["hot", "top"]:
-            try:
-                url = f"https://oauth.reddit.com/r/{sub}/{sort}"
-                resp = requests.get(url, headers=headers, params={"limit": limit}, timeout=15)
-                resp.raise_for_status()
-                posts = resp.json()["data"]["children"]
-            except Exception as e:
-                print(f"  [Reddit] Error for r/{sub}: {e}")
+        try:
+            resp = requests.get(
+                base,
+                params={"subreddit": sub, "size": limit, "sort": "score"},
+                timeout=15
+            )
+            if resp.status_code == 429:
+                print(f"  [Reddit] Rate limited on r/{sub}, sleeping 30s")
+                time.sleep(30)
                 continue
+            if resp.status_code != 200:
+                print(f"  [Reddit] r/{sub} returned {resp.status_code}")
+                continue
+            posts = resp.json().get("data", [])
+        except Exception as e:
+            print(f"  [Reddit] Error for r/{sub}: {e}")
+            continue
 
-            for post in posts:
-                d = post["data"]
-                if d.get("is_self") is False and not d.get("url", "").startswith("https://www.reddit.com"):
-                    post_url = d.get("url", "")
-                else:
-                    post_url = f"https://reddit.com{d.get('permalink', '')}"
-
-                row = {
-                    "id":         url_to_id(post_url),
-                    "title":      d.get("title", "")[:200],
-                    "url":        post_url,
-                    "body":       (d.get("selftext") or "")[:500],
-                    "source":     "reddit",
-                    "domain":     domain,
-                    "stars":      d.get("score", 0),
-                    "comments":   d.get("num_comments", 0),
-                    "created_at": datetime.fromtimestamp(
-                        d.get("created_utc", 0), tz=timezone.utc
-                    ).isoformat(),
-                }
-                if insert_opportunity(row):
-                    inserted += 1
-            time.sleep(1)
+        for d in posts:
+            permalink = d.get("permalink", "")
+            post_url = (
+                d["url"] if d.get("url", "").startswith("http") and not d.get("is_self")
+                else f"https://reddit.com{permalink}"
+            )
+            row = {
+                "id":         url_to_id(post_url),
+                "title":      (d.get("title") or "")[:200],
+                "url":        post_url,
+                "body":       (d.get("selftext") or "")[:500],
+                "source":     "reddit",
+                "domain":     domain,
+                "stars":      d.get("score", 0),
+                "comments":   d.get("num_comments", 0),
+                "created_at": datetime.fromtimestamp(
+                    d.get("created_utc", 0), tz=timezone.utc
+                ).isoformat(),
+            }
+            if insert_opportunity(row):
+                inserted += 1
+        time.sleep(1)
     return inserted
 
 
