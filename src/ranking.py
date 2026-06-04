@@ -118,6 +118,40 @@ def rank_opportunities(
     return ranked[:top_n]
 
 
+# ── Filter-first ranking (no FAISS rebuild needed) ───────────────────────────
+
+def rank_from_rows(
+    persona_vec: list,
+    rows: list,
+    persona_name: str = "default",
+    top_n: int = 15,
+) -> list:
+    """
+    Rank a pre-filtered list of rows directly using numpy dot product.
+    Vectors must already be L2-normalised (they are, from sentence-transformers).
+    """
+    if not rows or not persona_vec:
+        return []
+
+    pvec = np.array(persona_vec, dtype="float32")
+    candidates = []
+    for row in rows:
+        emb = row.get("embedding")
+        if not emb:
+            continue
+        vec = np.array(json.loads(emb) if isinstance(emb, str) else emb, dtype="float32")
+        sim = float(np.dot(pvec, vec))
+        c = dict(row)
+        c["similarity"]      = sim
+        c["composite_score"] = composite_score(c, sim)
+        c["explanation"]     = explain(c, sim)
+        candidates.append(c)
+
+    bandit = UCBBandit()
+    ranked = bandit.rank(candidates, persona=persona_name)
+    return ranked[:top_n]
+
+
 # ── Evaluation metric (NDCG@10) ──────────────────────────────────────────────
 
 def ndcg_at_k(ranked: list, relevant_ids: set, k: int = 10) -> float:

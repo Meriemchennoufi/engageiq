@@ -24,7 +24,7 @@ from embeddings import (
     embed_all_opportunities, embed_persona,
     build_faiss_index, encode_text,
 )
-from ranking import rank_opportunities, ndcg_at_k
+from ranking import rank_opportunities, rank_from_rows, ndcg_at_k
 from analytics import (
     load_df, top_domains, source_distribution,
     top_opportunities, trending_by_stars,
@@ -276,8 +276,11 @@ if "persona"          not in st.session_state: st.session_state.persona = "Sofia
 if "ranked"           not in st.session_state: st.session_state.ranked = []
 if "index"            not in st.session_state: st.session_state.index = None
 if "rows"             not in st.session_state: st.session_state.rows = []
+if "pvec"             not in st.session_state: st.session_state.pvec = None
 if "custom_interests" not in st.session_state: st.session_state.custom_interests = ""
 if "_open_url"        not in st.session_state: st.session_state._open_url = None
+if "_last_filter"     not in st.session_state: st.session_state._last_filter = None
+if "_filter_ranked"   not in st.session_state: st.session_state._filter_ranked = []
 
 # ── Background poller ─────────────────────────────────────────────────────────
 def _poll_loop():
@@ -349,6 +352,9 @@ with st.sidebar:
                 pvec = json.loads(p["embedding"])
             else:
                 pvec = encode_text(PERSONAS.get(p_name, "") or st.session_state.custom_interests)
+            st.session_state.pvec  = pvec
+            st.session_state._last_filter  = None   # invalidate filter cache
+            st.session_state._filter_ranked = []
             st.session_state.ranked = rank_opportunities(pvec, index, rows, persona_name=p_name, top_n=50)
         st.success("Ready."); st.rerun()
 
@@ -501,15 +507,13 @@ with tab0:
 # TAB 1 — OPPORTUNITIES
 # ─────────────────────────────────────────────────────────────────────────────
 with tab1:
-    if not st.session_state.ranked:
+    if not st.session_state.rows or st.session_state.pvec is None:
         st.markdown(
             "<div style='background:#eff6ff;border:1px solid #bfdbfe;border-radius:8px;padding:16px 20px;"
-            "color:#1e40af;font-size:0.9rem;'>Click <strong>Load Rankings</strong> in the sidebar to get started.</div>",
+            "color:#1e40af;font-size:0.9rem;'>Click <strong>Update Rankings</strong> in the sidebar to get started.</div>",
             unsafe_allow_html=True
         )
     else:
-        ranked = st.session_state.ranked
-
         # ── Filter row ──
         fc1, fc2 = st.columns([2, 2])
         with fc1:
@@ -519,16 +523,32 @@ with tab1:
             from scraper import DOMAINS as _ALL_DOMAINS
             domain_filter = st.multiselect("Domain", sorted(_ALL_DOMAINS.keys()))
 
-        filtered = [
-            r for r in ranked
-            if r["source"] in (source_filter or ["github", "github_issue", "hackernews", "reddit"])
-            and (not domain_filter or r["domain"] in domain_filter)
-        ]
+        # ── Filter rows, then rank filtered subset ──
+        all_sources = source_filter or ["github", "github_issue", "hackernews", "reddit"]
+        filter_key = (tuple(sorted(all_sources)), tuple(sorted(domain_filter)))
 
-        showing = min(15, len(filtered))
+        if filter_key != st.session_state._last_filter:
+            filtered_rows = [
+                r for r in st.session_state.rows
+                if r["source"] in all_sources
+                and (not domain_filter or r.get("domain") in domain_filter)
+            ]
+            p_name = st.session_state.persona
+            st.session_state._filter_ranked = rank_from_rows(
+                st.session_state.pvec, filtered_rows, persona_name=p_name, top_n=15
+            )
+            st.session_state._last_filter = filter_key
+
+        filtered = st.session_state._filter_ranked
+        showing  = len(filtered)
+        total_pool = sum(
+            1 for r in st.session_state.rows
+            if r["source"] in all_sources
+            and (not domain_filter or r.get("domain") in domain_filter)
+        )
         st.markdown(
             f"<div style='font-size:0.82rem;color:#64748b;margin:6px 0 10px;'>"
-            f"Showing top {showing} of {len(filtered)} opportunities · ranked by relevance, community health, and recency</div>",
+            f"Showing top {showing} of {total_pool:,} matching opportunities · ranked by relevance, community health, and recency</div>",
             unsafe_allow_html=True
         )
 
@@ -546,7 +566,7 @@ with tab1:
             "reddit":       "Reply with real value — share a project, tool, or relevant experience.",
         }
 
-        for i, opp in enumerate(filtered[:15], 1):
+        for i, opp in enumerate(filtered, 1):
             with st.expander(f"#{i}  {opp['title'][:85]}", expanded=(i <= 3)):
                 col_a, col_b = st.columns([3, 1])
 
