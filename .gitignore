@@ -1,5 +1,7 @@
 .env
 data/engageiq.db
+# seed file is committed intentionally
+!data/seed_opportunities.json.gz
 __pycache__/
 *.pyc
 *.pyo

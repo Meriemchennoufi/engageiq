@@ -12,6 +12,32 @@ def get_conn():
     return conn
 
 
+SEED_PATH = Path(__file__).parent.parent / "data" / "seed_opportunities.json.gz"
+
+
+def _load_seed():
+    """Populate DB from seed file on first run (no API calls needed)."""
+    if not SEED_PATH.exists():
+        return
+    conn = get_conn()
+    count = conn.execute("SELECT COUNT(*) FROM opportunities").fetchone()[0]
+    if count > 0:
+        conn.close()
+        return  # already populated
+    import gzip, json as _json
+    with gzip.open(SEED_PATH, "rt", encoding="utf-8") as f:
+        records = _json.load(f)
+    c = conn.cursor()
+    c.executemany(
+        """INSERT OR IGNORE INTO opportunities
+           (id, title, url, body, source, domain, stars, comments, fetched_at)
+           VALUES (:id,:title,:url,:body,:source,:domain,:stars,:comments,:fetched_at)""",
+        records
+    )
+    conn.commit()
+    conn.close()
+
+
 def init_db():
     DB_PATH.parent.mkdir(exist_ok=True)
     conn = get_conn()

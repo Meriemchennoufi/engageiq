@@ -16,7 +16,7 @@ import plotly.graph_objects as go
 from pathlib import Path
 
 from database import (
-    init_db, get_record_count, log_feedback,
+    init_db, _load_seed, get_record_count, log_feedback,
     get_feedback, get_saved_opportunities, upsert_persona, get_persona,
 )
 from personas import seed_personas, PERSONAS
@@ -64,8 +64,9 @@ html, body, * { color: #1a202c; }
 [data-testid="stSidebar"] { background-color: #fde8d0 !important; border-right: 1px solid #f4c4a0 !important; }
 [data-testid="stSidebar"] * { color: #1a202c !important; background-color: transparent; }
 
-/* ── Top header bar ── */
-[data-testid="stHeader"] { background-color: #ffffff !important; border-bottom: 1px solid #e8ecf0 !important; }
+/* ── Top header bar — hidden ── */
+[data-testid="stHeader"] { display: none !important; }
+[data-testid="stToolbar"] { display: none !important; }
 
 /* ── Tabs ── */
 [data-testid="stTabs"] { background: transparent !important; }
@@ -267,6 +268,7 @@ CHART_MARGIN_PIE   = dict(l=10, r=10, t=14, b=40)
 
 # ── Init ──────────────────────────────────────────────────────────────────────
 init_db()
+_load_seed()
 seed_personas()
 
 # ── Session state ─────────────────────────────────────────────────────────────
