@@ -305,10 +305,10 @@ with st.sidebar:
     selected = st.selectbox("Active persona", persona_options, index=idx, label_visibility="collapsed")
 
     if selected == "Custom":
-        custom_text = st.text_area("Interests", placeholder="e.g. Python, data engineering, cloud APIs", label_visibility="collapsed")
+        st.session_state.persona = "Custom"
+        custom_text = st.text_area("Interests", placeholder="Tell us more about yourself and your interests.", label_visibility="collapsed")
         if st.button("Save Persona", use_container_width=True) and custom_text.strip():
             upsert_persona("Custom", custom_text.strip())
-            st.session_state.persona = "Custom"
             st.session_state.custom_interests = custom_text.strip()
             st.success("Saved.")
     else:
@@ -516,7 +516,8 @@ with tab1:
             source_filter = st.multiselect("Source", ["github", "github_issue", "hackernews", "reddit"],
                                            default=["github", "github_issue", "hackernews", "reddit"])
         with fc2:
-            domain_filter = st.multiselect("Domain", sorted({r["domain"] for r in ranked if r["domain"]}))
+            from scraper import DOMAINS as _ALL_DOMAINS
+            domain_filter = st.multiselect("Domain", sorted(_ALL_DOMAINS.keys()))
 
         filtered = [
             r for r in ranked
