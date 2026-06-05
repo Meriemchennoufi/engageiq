@@ -1,34 +1,33 @@
 """
 Seed the four project personas into the database.
-Each persona now has structured fields: background, interests, goal, time_budget.
-The ranking vector is built from interests + goal combined.
+Each persona matches the official BAX-423 project specification exactly.
 """
 from database import upsert_persona, init_db
 
 PERSONAS = {
     "Sofia": {
-        "background":   "PhD student in NLP at UC Davis",
-        "interests":    "machine learning NLP data pipelines Python pandas neural networks",
-        "goal":         "Find open source repos to contribute to and build my portfolio",
-        "time_budget":  10,
-    },
-    "David": {
-        "background":   "Senior DevOps engineer with 6 years of cloud infrastructure experience",
-        "interests":    "Kubernetes Terraform CI/CD observability cloud-native Helm Prometheus GitOps",
-        "goal":         "Stay current with cloud-native tools and discover projects to contribute to",
-        "time_budget":  8,
-    },
-    "Lina": {
-        "background":   "Tech journalist covering emerging software trends",
-        "interests":    "trending open source viral GitHub stars fast-growing communities emerging tools",
-        "goal":         "Spot the next big thing before it goes mainstream",
+        "background":   "MSBA student, graduating soon. Wants to build a visible open-source portfolio before job hunting.",
+        "interests":    "machine learning NLP data pipelines Python pandas beginner-friendly good first issue open source",
+        "goal":         "Find beginner-friendly GitHub repos to contribute to and Reddit/blog discussions to engage with for visibility.",
         "time_budget":  5,
     },
+    "David": {
+        "background":   "Mid-career DevOps engineer (5 years). Wants to establish thought leadership in cloud-native infrastructure.",
+        "interests":    "Kubernetes Terraform CI/CD observability cloud-native infrastructure Helm Prometheus GitOps",
+        "goal":         "Find high-signal GitHub projects, Reddit threads, and blog posts where expert commentary adds value.",
+        "time_budget":  3,
+    },
+    "Lina": {
+        "background":   "Data journalist at a tech publication. Monitors open-source and tech communities for story leads.",
+        "interests":    "trending repos viral discussions emerging tools community fast-growing stars recency velocity",
+        "goal":         "Surface fast-growing repos, trending Reddit threads, and blog posts gaining traction before they go mainstream.",
+        "time_budget":  10,
+    },
     "Raj": {
-        "background":   "Indie developer building a B2B SaaS product",
-        "interests":    "developer tools API CLI productivity SaaS startup open source business models",
-        "goal":         "Find tools and communities to grow my product and get early users",
-        "time_budget":  6,
+        "background":   "Technical co-founder of a developer tools startup. Wants to grow awareness by engaging in relevant communities.",
+        "interests":    "developer productivity APIs CLI tools open-source business models SaaS startup side projects",
+        "goal":         "Find Reddit threads and blog posts where his product is relevant, and GitHub repos where integration makes sense.",
+        "time_budget":  4,
     },
 }
 
@@ -41,7 +40,6 @@ def persona_vector_text(persona: dict) -> str:
 def seed_personas():
     init_db()
     for name, p in PERSONAS.items():
-        # Store combined interests+goal as the interests field in DB
         upsert_persona(name, persona_vector_text(p))
     print(f"Seeded {len(PERSONAS)} personas: {', '.join(PERSONAS.keys())}")
 
