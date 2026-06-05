@@ -251,7 +251,7 @@ _BUTTON_TAGGER_JS = """
 })();
 </script>
 """
-st.iframe(_BUTTON_TAGGER_JS, height=1)
+st.components.v1.html(_BUTTON_TAGGER_JS, height=0)
 
 # ── Pastel chart palette ──────────────────────────────────────────────────────
 PASTEL = ["#a8c5e8", "#b5d5c5", "#f5c5a3", "#c5b5e8", "#f5d5a3",
