@@ -531,20 +531,22 @@ with tab1:
         # ── Filter row ──
         fc1, fc2 = st.columns([2, 2])
         with fc1:
-            source_filter = st.multiselect("Source", ["github", "github_issue", "hackernews", "reddit"],
-                                           default=["github", "github_issue", "hackernews", "reddit"])
+            source_filter = st.multiselect("Source", ["github", "hackernews", "reddit"],
+                                           default=["github", "hackernews", "reddit"])
         with fc2:
             from scraper import DOMAINS as _ALL_DOMAINS
             domain_filter = st.multiselect("Domain", sorted(_ALL_DOMAINS.keys()))
 
         # ── Filter rows, then rank filtered subset ──
-        all_sources = source_filter or ["github", "github_issue", "hackernews", "reddit"]
+        all_sources = source_filter or ["github", "hackernews", "reddit"]
+        # github_issue is treated as github in the UI
+        expanded_sources = all_sources + (["github_issue"] if "github" in all_sources else [])
         filter_key = (tuple(sorted(all_sources)), tuple(sorted(domain_filter)))
 
         if filter_key != st.session_state._last_filter:
             filtered_rows = [
                 r for r in st.session_state.rows
-                if r["source"] in all_sources
+                if r["source"] in expanded_sources
                 and (not domain_filter or r.get("domain") in domain_filter)
             ]
             p_name = st.session_state.persona
@@ -557,7 +559,7 @@ with tab1:
         showing  = len(filtered)
         total_pool = sum(
             1 for r in st.session_state.rows
-            if r["source"] in all_sources
+            if r["source"] in expanded_sources
             and (not domain_filter or r.get("domain") in domain_filter)
         )
         st.markdown(

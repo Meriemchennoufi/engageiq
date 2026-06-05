@@ -27,7 +27,10 @@ def top_domains(df: pd.DataFrame, n: int = 15) -> pd.DataFrame:
 
 
 def source_distribution(df: pd.DataFrame) -> pd.DataFrame:
-    vc = df["source"].value_counts()
+    # Merge github_issue into github for cleaner display
+    df2 = df.copy()
+    df2["source"] = df2["source"].replace("github_issue", "github")
+    vc = df2["source"].value_counts()
     return pd.DataFrame({"source": vc.index, "count": vc.values})
 
 
