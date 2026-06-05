@@ -16,29 +16,14 @@ SEED_PATH = Path(__file__).parent.parent / "data" / "seed_opportunities.json.gz"
 
 
 def _load_seed():
-    """
-    Load seed data into the DB.
-    - If the DB has more records than the seed (stale / dirty), wipe and reload.
-    - If the DB already has exactly the right count, skip (fast startup).
-    - If the DB is empty or short, insert missing records.
-    """
+    """Populate DB from seed file — adds any missing records (INSERT OR IGNORE)."""
     if not SEED_PATH.exists():
         return
     import gzip, json as _json
     with gzip.open(SEED_PATH, "rt", encoding="utf-8") as f:
         records = _json.load(f)
-    seed_count = len(records)
-
     conn = get_conn()
     c = conn.cursor()
-    db_count = c.execute("SELECT COUNT(*) FROM opportunities").fetchone()[0]
-
-    # DB is dirty (has extra records from old ingestion runs) — wipe and reload clean
-    if db_count > seed_count:
-        c.execute("DELETE FROM opportunities")
-        conn.commit()
-
-    # Insert any records not already present
     c.executemany(
         """INSERT OR IGNORE INTO opportunities
            (id, title, url, body, source, domain, stars, comments, fetched_at, embedding)
@@ -89,12 +74,13 @@ def init_db():
 
 
 def reset_opportunities():
-    """Drop all opportunities and reload from the clean seed file."""
+    """Drop all opportunities and reload from the clean seed file.
+    Only called manually via the Reset button — never on startup."""
     conn = get_conn()
     conn.execute("DELETE FROM opportunities")
     conn.commit()
     conn.close()
-    _load_seed()
+    _load_seed()  # re-insert the clean 10k records
 
 
 def url_to_id(url: str) -> str:
