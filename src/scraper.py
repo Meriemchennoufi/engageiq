@@ -122,6 +122,28 @@ def scrape_github_issues(domain: str, topics: list, per_topic: int = 30) -> int:
 
 # ── Hacker News ─────────────────────────────────────────────────────────────
 
+# Trusted domains for HN links — block spam/gambling/unrelated sites
+_HN_ALLOWED = (
+    "github.com", "news.ycombinator.com", "arxiv.org", "medium.com",
+    "substack.com", "dev.to", "stackoverflow.com", "reddit.com",
+    "techcrunch.com", "wired.com", "arstechnica.com", "theverge.com",
+    "bloomberg.com", "nytimes.com", "thenewstack.io", "infoq.com",
+    "towardsdatascience.com", "hackernoon.com", "blog.cloudflare.com",
+    "engineering.fb.com", "research.google", "openai.com", "anthropic.com",
+    "huggingface.co", "pytorch.org", "tensorflow.org", "kubernetes.io",
+    "docker.com", "aws.amazon.com", "cloud.google.com", "azure.microsoft.com",
+    "netlify.com", "vercel.com", "heroku.com", "digitalocean.com",
+)
+
+def _is_valid_hn_url(url: str) -> bool:
+    """Return True only for HN discussion pages or known tech domains."""
+    if not url:
+        return False
+    if "news.ycombinator.com" in url:
+        return True
+    return any(domain in url for domain in _HN_ALLOWED)
+
+
 def scrape_hn(domain: str, keywords: list, max_items: int = 40) -> int:
     inserted = 0
     base = "https://hn.algolia.com/api/v1/search"
@@ -136,6 +158,9 @@ def scrape_hn(domain: str, keywords: list, max_items: int = 40) -> int:
 
         for hit in hits:
             url = hit.get("url") or f"https://news.ycombinator.com/item?id={hit.get('objectID')}"
+            # Skip spam / non-tech URLs
+            if not _is_valid_hn_url(url):
+                continue
             row = {
                 "id":         url_to_id(url),
                 "title":      (hit.get("title") or "")[:200],
