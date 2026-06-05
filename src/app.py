@@ -267,9 +267,15 @@ CHART_MARGIN       = dict(l=0,  r=20, t=14, b=8)
 CHART_MARGIN_PIE   = dict(l=10, r=10, t=14, b=40)
 
 # ── Init ──────────────────────────────────────────────────────────────────────
-init_db()
-_load_seed()
-seed_personas()
+try:
+    init_db()
+    _load_seed()
+    seed_personas()
+except Exception as _startup_err:
+    import traceback
+    st.error(f"**Startup error:** {_startup_err}")
+    st.code(traceback.format_exc())
+    st.stop()
 
 # ── Session state ─────────────────────────────────────────────────────────────
 if "persona"          not in st.session_state: st.session_state.persona = "Sofia"
