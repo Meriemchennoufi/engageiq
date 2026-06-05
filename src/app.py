@@ -295,11 +295,25 @@ if "poller_started" not in st.session_state:
 
 # ── Sidebar ───────────────────────────────────────────────────────────────────
 with st.sidebar:
-    st.markdown(
-        "<div style='font-size:1.15rem;font-weight:700;color:#1a202c;margin-bottom:2px;'>EngageIQ</div>"
-        "<div style='font-size:0.78rem;color:#64748b;margin-bottom:12px;'>Smart Engagement Opportunity Scorer</div>",
-        unsafe_allow_html=True
-    )
+    st.markdown("""
+        <div style='display:flex;align-items:center;gap:12px;margin-bottom:6px;'>
+          <!-- Speech bubble logo -->
+          <svg width="48" height="44" viewBox="0 0 48 44" xmlns="http://www.w3.org/2000/svg">
+            <!-- Bubble body -->
+            <rect x="1" y="1" width="40" height="32" rx="10" fill="#F4674A"/>
+            <!-- Tail -->
+            <polygon points="8,30 2,43 20,30" fill="#F4674A"/>
+            <!-- /// lines -->
+            <line x1="10" y1="22" x2="16" y2="10" stroke="white" stroke-width="3" stroke-linecap="round"/>
+            <line x1="18" y1="22" x2="24" y2="10" stroke="white" stroke-width="3" stroke-linecap="round"/>
+            <line x1="26" y1="22" x2="32" y2="10" stroke="white" stroke-width="3" stroke-linecap="round"/>
+          </svg>
+          <div>
+            <div style='font-size:1.45rem;font-weight:800;color:#1a202c;line-height:1.1;letter-spacing:-0.02em;'>EngageIQ</div>
+            <div style='font-size:0.72rem;color:#64748b;margin-top:1px;'>Smart Engagement Opportunity Scorer</div>
+          </div>
+        </div>
+    """, unsafe_allow_html=True)
     st.divider()
 
     st.markdown("<div style='font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#64748b;margin-bottom:4px;'>Persona</div>", unsafe_allow_html=True)
