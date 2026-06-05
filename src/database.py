@@ -73,6 +73,15 @@ def init_db():
     conn.close()
 
 
+def reset_opportunities():
+    """Drop all opportunities and reload from the clean seed file."""
+    conn = get_conn()
+    conn.execute("DELETE FROM opportunities")
+    conn.commit()
+    conn.close()
+    _load_seed()
+
+
 def url_to_id(url: str) -> str:
     return hashlib.sha256(url.encode()).hexdigest()[:16]
 

@@ -17,6 +17,7 @@ from pathlib import Path
 from database import (
     init_db, _load_seed, get_record_count, log_feedback,
     get_feedback, get_saved_opportunities, upsert_persona, get_persona,
+    reset_opportunities,
 )
 from personas import seed_personas, PERSONAS, persona_vector_text
 from embeddings import (
@@ -367,6 +368,11 @@ with st.sidebar:
         with st.spinner("Encoding opportunities..."):
             embed_all_opportunities(batch_size=64)
         st.success("Done."); st.rerun()
+
+    if st.button("Reset to Clean Data", width="stretch"):
+        with st.spinner("Wiping DB and reloading clean seed..."):
+            reset_opportunities()
+        st.success(f"Done. {get_record_count():,} records loaded."); st.rerun()
 
     st.divider()
 
