@@ -16,7 +16,7 @@ SEED_PATH = Path(__file__).parent.parent / "data" / "seed_opportunities.json.gz"
 
 
 def _load_seed():
-    """Populate DB from seed file — adds any missing records (INSERT OR IGNORE)."""
+    """Populate DB from seed file — always merges, adds any missing records."""
     if not SEED_PATH.exists():
         return
     import gzip, json as _json
@@ -71,16 +71,6 @@ def init_db():
     """)
     conn.commit()
     conn.close()
-
-
-def reset_opportunities():
-    """Drop all opportunities and reload from the clean seed file.
-    Only called manually via the Reset button — never on startup."""
-    conn = get_conn()
-    conn.execute("DELETE FROM opportunities")
-    conn.commit()
-    conn.close()
-    _load_seed()  # re-insert the clean 10k records
 
 
 def url_to_id(url: str) -> str:

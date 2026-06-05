@@ -14,37 +14,29 @@ import plotly.express as px
 import plotly.graph_objects as go
 from pathlib import Path
 
-# ── Page config — MUST be first Streamlit command ────────────────────────────
+from database import (
+    init_db, _load_seed, get_record_count, log_feedback,
+    get_feedback, get_saved_opportunities, upsert_persona, get_persona,
+)
+from personas import seed_personas, PERSONAS, persona_vector_text
+from embeddings import (
+    embed_all_opportunities, embed_persona,
+    build_faiss_index, encode_text,
+)
+from ranking import rank_opportunities, rank_from_rows, ndcg_at_k
+from analytics import (
+    load_df, top_domains, source_distribution,
+    top_opportunities, trending_by_stars,
+    engagement_volume_over_time, summary_stats,
+)
+
+# ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
     page_title="EngageIQ",
     page_icon="⚡",
     layout="wide",
     initial_sidebar_state="expanded",
 )
-
-# ── Project imports — show error in UI if anything fails ─────────────────────
-try:
-    from database import (
-        init_db, _load_seed, get_record_count, log_feedback,
-        get_feedback, get_saved_opportunities, upsert_persona, get_persona,
-        reset_opportunities,
-    )
-    from personas import seed_personas, PERSONAS, persona_vector_text
-    from embeddings import (
-        embed_all_opportunities, embed_persona,
-        build_faiss_index, encode_text,
-    )
-    from ranking import rank_opportunities, rank_from_rows, ndcg_at_k
-    from analytics import (
-        load_df, top_domains, source_distribution,
-        top_opportunities, trending_by_stars,
-        engagement_volume_over_time, summary_stats,
-    )
-except Exception as _import_err:
-    import traceback
-    st.error(f"**Import error:** {_import_err}")
-    st.code(traceback.format_exc())
-    st.stop()
 
 # ── Force light mode + design system ─────────────────────────────────────────
 st.markdown("""
@@ -274,15 +266,9 @@ CHART_MARGIN       = dict(l=0,  r=20, t=14, b=8)
 CHART_MARGIN_PIE   = dict(l=10, r=10, t=14, b=40)
 
 # ── Init ──────────────────────────────────────────────────────────────────────
-try:
-    init_db()
-    _load_seed()
-    seed_personas()
-except Exception as _startup_err:
-    import traceback
-    st.error(f"**Startup error:** {_startup_err}")
-    st.code(traceback.format_exc())
-    st.stop()
+init_db()
+_load_seed()
+seed_personas()
 
 # ── Session state ─────────────────────────────────────────────────────────────
 if "persona"          not in st.session_state: st.session_state.persona = "Sofia"
@@ -381,11 +367,6 @@ with st.sidebar:
         with st.spinner("Encoding opportunities..."):
             embed_all_opportunities(batch_size=64)
         st.success("Done."); st.rerun()
-
-    if st.button("Reset to Clean Data", width="stretch"):
-        with st.spinner("Wiping DB and reloading clean seed..."):
-            reset_opportunities()
-        st.success(f"Done. {get_record_count():,} records loaded."); st.rerun()
 
     st.divider()
 
