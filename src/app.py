@@ -14,22 +14,28 @@ import plotly.express as px
 import plotly.graph_objects as go
 from pathlib import Path
 
-from database import (
-    init_db, _load_seed, get_record_count, log_feedback,
-    get_feedback, get_saved_opportunities, upsert_persona, get_persona,
-    reset_opportunities,
-)
-from personas import seed_personas, PERSONAS, persona_vector_text
-from embeddings import (
-    embed_all_opportunities, embed_persona,
-    build_faiss_index, encode_text,
-)
-from ranking import rank_opportunities, rank_from_rows, ndcg_at_k
-from analytics import (
-    load_df, top_domains, source_distribution,
-    top_opportunities, trending_by_stars,
-    engagement_volume_over_time, summary_stats,
-)
+try:
+    from database import (
+        init_db, _load_seed, get_record_count, log_feedback,
+        get_feedback, get_saved_opportunities, upsert_persona, get_persona,
+        reset_opportunities,
+    )
+    from personas import seed_personas, PERSONAS, persona_vector_text
+    from embeddings import (
+        embed_all_opportunities, embed_persona,
+        build_faiss_index, encode_text,
+    )
+    from ranking import rank_opportunities, rank_from_rows, ndcg_at_k
+    from analytics import (
+        load_df, top_domains, source_distribution,
+        top_opportunities, trending_by_stars,
+        engagement_volume_over_time, summary_stats,
+    )
+except Exception as _import_err:
+    import traceback
+    st.error(f"**Import error:** {_import_err}")
+    st.code(traceback.format_exc())
+    st.stop()
 
 # ── Page config ───────────────────────────────────────────────────────────────
 st.set_page_config(
