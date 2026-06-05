@@ -23,7 +23,7 @@ from embeddings import (
     embed_all_opportunities, embed_persona,
     build_faiss_index, encode_text,
 )
-from ranking import rank_opportunities, rank_from_rows, ndcg_at_k
+from ranking import rank_opportunities, rank_from_rows, ndcg_at_k, _recency_score
 from analytics import (
     load_df, top_domains, source_distribution,
     top_opportunities, trending_by_stars,
@@ -533,6 +533,66 @@ with tab0:
                                 xanchor="center", font=dict(size=11, color="#1a202c")),
                 )
                 st.plotly_chart(_fig2, width="stretch")
+
+            # ── Engagement Volume Over Time + Trending Repos ───────────────────
+            st.markdown("<div style='height:20px'></div>", unsafe_allow_html=True)
+            st.markdown(
+                "<hr style='border:none;border-top:1.5px solid #f0e8de;margin:0 0 20px;'/>",
+                unsafe_allow_html=True
+            )
+            _ch3, _ch4 = st.columns([3, 2])
+
+            with _ch3:
+                st.markdown(
+                    "<div style='font-size:0.83rem;font-weight:600;color:#1a202c;margin-bottom:4px;'>Engagement Volume Over Time</div>"
+                    "<div style='font-size:0.75rem;color:#94a3b8;margin-bottom:6px;'>Records fetched per day — shows data pipeline activity</div>",
+                    unsafe_allow_html=True
+                )
+                _vol = engagement_volume_over_time(_df_home)
+                if not _vol.empty:
+                    _fig3 = px.area(
+                        _vol, x="date", y="count",
+                        color_discrete_sequence=["#F4674A"],
+                        labels={"date": "", "count": "Records"},
+                    )
+                    _fig3.update_traces(
+                        line_color="#F4674A", fillcolor="rgba(244,103,74,0.15)",
+                        line_width=2
+                    )
+                    _fig3.update_layout(
+                        **CHART_LAYOUT, height=280, margin=CHART_MARGIN,
+                        xaxis=dict(showgrid=False, tickfont=dict(color="#1a202c", size=10)),
+                        yaxis=dict(showgrid=True, gridcolor="#f1f5f9",
+                                   tickfont=dict(color="#1a202c", size=10)),
+                    )
+                    st.plotly_chart(_fig3, width="stretch")
+
+            with _ch4:
+                st.markdown(
+                    "<div style='font-size:0.83rem;font-weight:600;color:#1a202c;margin-bottom:4px;'>Trending GitHub Repos</div>"
+                    "<div style='font-size:0.75rem;color:#94a3b8;margin-bottom:6px;'>Top 10 by star count — community health signal</div>",
+                    unsafe_allow_html=True
+                )
+                _trend = trending_by_stars(_df_home, n=10)
+                if not _trend.empty:
+                    _fig4 = px.bar(
+                        _trend.sort_values("stars"), x="stars", y="title",
+                        orientation="h", color="domain",
+                        color_discrete_sequence=PASTEL,
+                        labels={"stars": "Stars", "title": ""},
+                        text="stars",
+                    )
+                    _fig4.update_traces(textposition="outside", textfont_size=9,
+                                        textfont_color="#1a202c", marker_line_width=0)
+                    _fig4.update_layout(
+                        **CHART_LAYOUT, height=280, showlegend=False, margin=CHART_MARGIN,
+                        xaxis=dict(showgrid=True, gridcolor="#f1f5f9",
+                                   tickfont=dict(color="#1a202c", size=10)),
+                        yaxis=dict(showgrid=False, tickfont=dict(color="#1a202c", size=9),
+                                   autorange="reversed"),
+                    )
+                    st.plotly_chart(_fig4, width="stretch")
+
     except Exception:
         pass
 
@@ -609,12 +669,18 @@ with tab1:
                     src = opp["source"]
                     badge_s = src_badge_style.get(src, "background:#f1f5f9;color:#475569;")
                     body_preview = opp["body"][:160] if opp.get("body") else ""
+                    # 🔥 Rising badge — shown if item was posted within ~16 days (recency > 0.84)
+                    is_rising = _recency_score(opp.get("created_at", "")) > 0.84
+                    rising_html = ('&nbsp;<span style="display:inline-block;padding:1px 8px;border-radius:3px;'
+                                   'font-size:0.68rem;font-weight:700;background:#fff3e0;color:#b45309;">🔥 Rising</span>'
+                                   if is_rising else "")
                     st.markdown(
                         f'<div style="margin-bottom:4px;">'
                         f'<span style="display:inline-block;padding:1px 8px;border-radius:3px;'
                         f'font-size:0.68rem;font-weight:700;letter-spacing:0.05em;text-transform:uppercase;{badge_s}">'
                         f'{src_label.get(src, src)}</span>'
                         f'&nbsp;<span style="color:#94a3b8;font-size:0.75rem;">{opp.get("domain","")}</span>'
+                        f'{rising_html}'
                         f'</div>'
                         f'<a href="{opp["url"]}" style="font-size:0.9rem;font-weight:600;color:#1e293b;text-decoration:none;" target="_blank">{opp["title"]}</a>'
                         + (f'<p style="color:#94a3b8;font-size:0.78rem;margin:3px 0 6px;line-height:1.4;">{body_preview}</p>' if body_preview else '<div style="margin-bottom:6px;"></div>'),
@@ -735,6 +801,39 @@ with tab3:
         )
         st.plotly_chart(fig_fb, width="stretch")
 
+
+    # ── NDCG@10 — Ranking Evaluation Metric ──────────────────────────────────
+    st.divider()
+    st.markdown(
+        "<div style='font-size:0.83rem;font-weight:600;color:#1a202c;margin-bottom:2px;'>Ranking Quality — NDCG@10</div>"
+        "<div style='font-size:0.8rem;color:#94a3b8;margin-bottom:8px;'>"
+        "Measures whether the items you <strong>Engaged</strong> with landed near the top of the ranked list. "
+        "Score 0–1 (1.0 = perfect ranking).</div>",
+        unsafe_allow_html=True
+    )
+    _ranked_for_ndcg = st.session_state.get("ranked", [])
+    _engaged_ids = {f["opportunity_id"] for f in feedback if f["action"] == "engage"}
+    if _ranked_for_ndcg and _engaged_ids:
+        _ndcg = ndcg_at_k(_ranked_for_ndcg, _engaged_ids, k=10)
+        _color = "#16a34a" if _ndcg >= 0.7 else "#d97706" if _ndcg >= 0.4 else "#dc2626"
+        st.markdown(
+            f'<div style="background:#ffffff;border:1px solid #e8ecf0;border-radius:10px;'
+            f'padding:16px 24px;display:inline-block;margin-bottom:4px;">'
+            f'<div style="font-size:0.68rem;font-weight:700;text-transform:uppercase;'
+            f'letter-spacing:0.08em;color:#94a3b8;margin-bottom:4px;">NDCG@10</div>'
+            f'<div style="font-size:2rem;font-weight:800;color:{_color};">{_ndcg:.3f}</div>'
+            f'<div style="font-size:0.75rem;color:#64748b;margin-top:2px;">'
+            f'Based on {len(_engaged_ids)} engaged item(s) in top {len(_ranked_for_ndcg)}</div>'
+            f'</div>',
+            unsafe_allow_html=True
+        )
+    else:
+        st.markdown(
+            "<div style='background:#f8fafc;border:1px solid #e2e8f0;border-radius:8px;padding:14px 18px;"
+            "color:#64748b;font-size:0.85rem;'>Click <strong>Engage</strong> on at least one opportunity, "
+            "then reload rankings to compute NDCG@10.</div>",
+            unsafe_allow_html=True
+        )
 
     # ── Simulation (always shown) ──
     st.divider()
