@@ -8,6 +8,7 @@ sys.path.insert(0, os.path.dirname(__file__))
 import json
 import threading
 import time
+import streamlit.components.v1 as st_components
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -250,7 +251,7 @@ _BUTTON_TAGGER_JS = """
 })();
 </script>
 """
-st.iframe(_BUTTON_TAGGER_JS, height=1)
+st_components.html(_BUTTON_TAGGER_JS, height=0, scrolling=False)
 
 # ── Pastel chart palette ──────────────────────────────────────────────────────
 PASTEL = ["#a8c5e8", "#b5d5c5", "#f5c5a3", "#c5b5e8", "#f5d5a3",
