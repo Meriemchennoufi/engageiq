@@ -18,7 +18,7 @@ from database import (
     init_db, _load_seed, get_record_count, log_feedback,
     get_feedback, get_saved_opportunities, upsert_persona, get_persona,
 )
-from personas import seed_personas, PERSONAS
+from personas import seed_personas, PERSONAS, persona_vector_text
 from embeddings import (
     embed_all_opportunities, embed_persona,
     build_faiss_index, encode_text,
@@ -320,19 +320,37 @@ with st.sidebar:
     idx = persona_options.index(st.session_state.persona) if st.session_state.persona in persona_options else 0
     selected = st.selectbox("Active persona", persona_options, index=idx, label_visibility="collapsed")
 
+    _label_style = "font-size:0.75rem;font-weight:600;color:#64748b;margin:8px 0 2px;"
+
     if selected == "Custom":
         st.session_state.persona = "Custom"
-        custom_text = st.text_area("Interests", placeholder="Tell us more about yourself and your interests.", label_visibility="collapsed")
-        if st.button("Save Persona", width="stretch") and custom_text.strip():
-            upsert_persona("Custom", custom_text.strip())
-            st.session_state.custom_interests = custom_text.strip()
-            st.success("Saved.")
+        st.markdown(f"<div style='{_label_style}'>Background</div>", unsafe_allow_html=True)
+        bg   = st.text_area("Background",  placeholder="e.g. PhD student in NLP at UC Davis",           key="c_bg",   label_visibility="collapsed", height=68)
+        st.markdown(f"<div style='{_label_style}'>Interests</div>", unsafe_allow_html=True)
+        ints = st.text_area("Interests",   placeholder="e.g. machine learning, Python, transformers",   key="c_int",  label_visibility="collapsed", height=68)
+        st.markdown(f"<div style='{_label_style}'>Goal</div>", unsafe_allow_html=True)
+        goal = st.text_area("Goal",        placeholder="e.g. Find repos to contribute to for portfolio", key="c_goal", label_visibility="collapsed", height=68)
+        st.markdown(f"<div style='{_label_style}'>Time Budget (hours/week)</div>", unsafe_allow_html=True)
+        time_budget = st.number_input("Time Budget", min_value=1, max_value=40, value=5, key="c_time", label_visibility="collapsed")
+        if st.button("Save Persona", width="stretch"):
+            combined = f"{ints.strip()} {goal.strip()}".strip()
+            if combined:
+                upsert_persona("Custom", combined)
+                st.session_state.custom_interests = combined
+                st.success("Saved.")
+            else:
+                st.warning("Please fill in at least Interests or Goal.")
     else:
         st.session_state.persona = selected
-        st.markdown(
-            f"<div style='font-size:0.8rem;color:#64748b;margin-top:4px;line-height:1.5;'>{PERSONAS[selected][:140]}...</div>",
-            unsafe_allow_html=True
-        )
+        p = PERSONAS[selected]
+        st.markdown(f"<div style='{_label_style}'>Background</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='font-size:0.8rem;color:#1a202c;margin-bottom:2px;'>{p['background']}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='{_label_style}'>Interests</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='font-size:0.8rem;color:#1a202c;margin-bottom:2px;'>{p['interests']}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='{_label_style}'>Goal</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='font-size:0.8rem;color:#1a202c;margin-bottom:2px;'>{p['goal']}</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='{_label_style}'>Time Budget (hours/week)</div>", unsafe_allow_html=True)
+        st.markdown(f"<div style='font-size:0.8rem;color:#1a202c;margin-bottom:2px;'>{p['time_budget']} hrs/week</div>", unsafe_allow_html=True)
 
     st.divider()
 
@@ -364,7 +382,9 @@ with st.sidebar:
             if p and p.get("embedding"):
                 pvec = json.loads(p["embedding"])
             else:
-                pvec = encode_text(PERSONAS.get(p_name, "") or st.session_state.custom_interests)
+                p_data = PERSONAS.get(p_name, {})
+                fallback = (persona_vector_text(p_data) if isinstance(p_data, dict) else p_data) or st.session_state.custom_interests
+                pvec = encode_text(fallback)
             st.session_state.pvec  = pvec
             st.session_state._last_filter  = None   # invalidate filter cache
             st.session_state._filter_ranked = []
