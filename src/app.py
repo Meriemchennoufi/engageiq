@@ -669,8 +669,8 @@ with tab1:
                     src = opp["source"]
                     badge_s = src_badge_style.get(src, "background:#f1f5f9;color:#475569;")
                     body_preview = opp["body"][:160] if opp.get("body") else ""
-                    # 🔥 Rising badge — shown if item was posted within ~16 days (recency > 0.84)
-                    is_rising = _recency_score(opp.get("created_at", "")) > 0.84
+                    # 🔥 Rising badge — shown if item was posted within ~60 days (recency > 0.51)
+                    is_rising = _recency_score(opp.get("created_at", "")) > 0.51
                     rising_html = ('&nbsp;<span style="display:inline-block;padding:1px 8px;border-radius:3px;'
                                    'font-size:0.68rem;font-weight:700;background:#fff3e0;color:#b45309;">🔥 Rising</span>'
                                    if is_rising else "")
