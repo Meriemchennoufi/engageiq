@@ -8,7 +8,6 @@ sys.path.insert(0, os.path.dirname(__file__))
 import json
 import threading
 import time
-import streamlit.components.v1 as st_components
 import streamlit as st
 import pandas as pd
 import plotly.express as px
@@ -251,7 +250,7 @@ _BUTTON_TAGGER_JS = """
 })();
 </script>
 """
-st_components.html(_BUTTON_TAGGER_JS, height=0, scrolling=False)
+st.iframe(_BUTTON_TAGGER_JS, height=1)
 
 # ── Pastel chart palette ──────────────────────────────────────────────────────
 PASTEL = ["#a8c5e8", "#b5d5c5", "#f5c5a3", "#c5b5e8", "#f5d5a3",
@@ -324,7 +323,7 @@ with st.sidebar:
     if selected == "Custom":
         st.session_state.persona = "Custom"
         custom_text = st.text_area("Interests", placeholder="Tell us more about yourself and your interests.", label_visibility="collapsed")
-        if st.button("Save Persona", use_container_width=True) and custom_text.strip():
+        if st.button("Save Persona", width="stretch") and custom_text.strip():
             upsert_persona("Custom", custom_text.strip())
             st.session_state.custom_interests = custom_text.strip()
             st.success("Saved.")
@@ -340,20 +339,20 @@ with st.sidebar:
     st.markdown("<div style='font-size:0.78rem;font-weight:600;text-transform:uppercase;letter-spacing:0.05em;color:#64748b;margin-bottom:6px;'>Data Pipeline</div>", unsafe_allow_html=True)
     st.metric("Records in DB", f"{get_record_count():,}")
 
-    if st.button("Run Ingestion", use_container_width=True):
+    if st.button("Run Ingestion", width="stretch"):
         with st.spinner("Ingesting from GitHub, HN, Reddit..."):
             from scraper import run_ingestion
             run_ingestion(target=10000)
         st.success("Done."); st.rerun()
 
-    if st.button("Compute Embeddings", use_container_width=True):
+    if st.button("Compute Embeddings", width="stretch"):
         with st.spinner("Encoding opportunities..."):
             embed_all_opportunities(batch_size=64)
         st.success("Done."); st.rerun()
 
     st.divider()
 
-    if st.button("Update Rankings", use_container_width=True, type="primary"):
+    if st.button("Update Rankings", width="stretch", type="primary"):
         with st.spinner("Building FAISS index..."):
             index, rows = build_faiss_index()
             st.session_state.index = index
@@ -493,7 +492,7 @@ with tab0:
                                tickfont=dict(color="#1a202c", size=11)),
                     yaxis=dict(showgrid=False, tickfont=dict(color="#1a202c", size=11)),
                 )
-                st.plotly_chart(_fig1, use_container_width=True)
+                st.plotly_chart(_fig1, width="stretch")
 
             with _ch2:
                 st.markdown("<div style='font-size:0.83rem;font-weight:600;color:#1a202c;margin-bottom:4px;'>Source Distribution</div>", unsafe_allow_html=True)
@@ -513,7 +512,7 @@ with tab0:
                     legend=dict(orientation="h", yanchor="bottom", y=-0.15, x=0.5,
                                 xanchor="center", font=dict(size=11, color="#1a202c")),
                 )
-                st.plotly_chart(_fig2, use_container_width=True)
+                st.plotly_chart(_fig2, width="stretch")
     except Exception:
         pass
 
@@ -635,18 +634,18 @@ with tab1:
                     pname = st.session_state.persona
                     with b1:
                         st.markdown('<div class="btn-engage">', unsafe_allow_html=True)
-                        if st.button("Engage", key=f"e_{opp['id']}_{i}", help="Opens link and marks as relevant", use_container_width=True):
+                        if st.button("Engage", key=f"e_{opp['id']}_{i}", help="Opens link and marks as relevant", width="stretch"):
                             log_feedback(opp["id"], "engage", pname)
                             st.session_state._open_url = opp["url"]
                         st.markdown('</div>', unsafe_allow_html=True)
                     with b2:
                         st.markdown('<div class="btn-skip">', unsafe_allow_html=True)
-                        if st.button("Skip", key=f"s_{opp['id']}_{i}", help="Not relevant — deprioritises this type", use_container_width=True):
+                        if st.button("Skip", key=f"s_{opp['id']}_{i}", help="Not relevant — deprioritises this type", width="stretch"):
                             log_feedback(opp["id"], "skip", pname)
                         st.markdown('</div>', unsafe_allow_html=True)
                     with b3:
                         st.markdown('<div class="btn-save">', unsafe_allow_html=True)
-                        if st.button("Save for later", key=f"b_{opp['id']}_{i}", help="Bookmark to review in the Feedback tab", use_container_width=True):
+                        if st.button("Save for later", key=f"b_{opp['id']}_{i}", help="Bookmark to review in the Feedback tab", width="stretch"):
                             log_feedback(opp["id"], "bookmark", pname)
                         st.markdown('</div>', unsafe_allow_html=True)
 
@@ -714,7 +713,7 @@ with tab3:
             legend=dict(orientation="h", yanchor="bottom", y=-0.15, x=0.5,
                         xanchor="center", font=dict(size=11, color="#1a202c")),
         )
-        st.plotly_chart(fig_fb, use_container_width=True)
+        st.plotly_chart(fig_fb, width="stretch")
 
 
     # ── Simulation (always shown) ──
@@ -746,7 +745,7 @@ with tab3:
                        tickfont=dict(color="#1a202c", size=11),
                        title_font=dict(color="#1a202c")),
         )
-        st.plotly_chart(fig_sim, use_container_width=True)
+        st.plotly_chart(fig_sim, width="stretch")
         st.success("Reward improves as the bandit learns user preferences over time.")
 
     # ── Saved for Later ───────────────────────────────────────────────────────
@@ -846,4 +845,4 @@ with tab4:
         with dl1:
             st.download_button("Download CSV", brief_df.to_csv(index=False),
                                file_name=f"engageiq_brief_{persona}.csv",
-                               mime="text/csv", use_container_width=True)
+                               mime="text/csv", width="stretch")
