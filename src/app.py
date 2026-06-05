@@ -14,6 +14,15 @@ import plotly.express as px
 import plotly.graph_objects as go
 from pathlib import Path
 
+# ── Page config — MUST be first Streamlit command ────────────────────────────
+st.set_page_config(
+    page_title="EngageIQ",
+    page_icon="⚡",
+    layout="wide",
+    initial_sidebar_state="expanded",
+)
+
+# ── Project imports — show error in UI if anything fails ─────────────────────
 try:
     from database import (
         init_db, _load_seed, get_record_count, log_feedback,
@@ -36,14 +45,6 @@ except Exception as _import_err:
     st.error(f"**Import error:** {_import_err}")
     st.code(traceback.format_exc())
     st.stop()
-
-# ── Page config ───────────────────────────────────────────────────────────────
-st.set_page_config(
-    page_title="EngageIQ",
-    page_icon="⚡",
-    layout="wide",
-    initial_sidebar_state="expanded",
-)
 
 # ── Force light mode + design system ─────────────────────────────────────────
 st.markdown("""
@@ -257,7 +258,7 @@ _BUTTON_TAGGER_JS = """
 })();
 </script>
 """
-st.components.v1.html(_BUTTON_TAGGER_JS, height=0)
+st.iframe(_BUTTON_TAGGER_JS, height=1)
 
 # ── Pastel chart palette ──────────────────────────────────────────────────────
 PASTEL = ["#a8c5e8", "#b5d5c5", "#f5c5a3", "#c5b5e8", "#f5d5a3",
