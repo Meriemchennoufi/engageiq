@@ -26,9 +26,9 @@ def _load_seed():
     c = conn.cursor()
     c.executemany(
         """INSERT OR IGNORE INTO opportunities
-           (id, title, url, body, source, domain, stars, comments, fetched_at)
-           VALUES (:id,:title,:url,:body,:source,:domain,:stars,:comments,:fetched_at)""",
-        records
+           (id, title, url, body, source, domain, stars, comments, fetched_at, embedding)
+           VALUES (:id,:title,:url,:body,:source,:domain,:stars,:comments,:fetched_at,:embedding)""",
+        [{**r, "embedding": r.get("embedding")} for r in records]
     )
     conn.commit()
     conn.close()

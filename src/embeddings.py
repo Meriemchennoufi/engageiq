@@ -198,6 +198,8 @@ def build_faiss_index():
 # ── Search ────────────────────────────────────────────────────────────────────
 
 def search(query_vec: list, index, rows: list, top_k: int = 50) -> list:
+    if index is None or not rows:
+        return []
     """
     Find the top_k most similar opportunities to a given query vector.
 
